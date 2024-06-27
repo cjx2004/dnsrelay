@@ -4,7 +4,7 @@
 #include <time.h>
 #include "murmurhash.h"
 
-#define CACHE_SIZE 997
+#define CACHE_SIZE 1000
 
 // 缓存项结构体
 struct CacheEntry
@@ -45,5 +45,8 @@ void clearCache(struct Cache* cache);
 
 // 打印缓存内容
 void printCache(struct Cache* cache);
+
+//删除最远不用的表项
+void removeLeastRecentlyUsed(struct Cache* cache);
 
 #endif /* CACHE_H */

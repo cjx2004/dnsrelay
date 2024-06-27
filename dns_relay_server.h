@@ -5,13 +5,24 @@
 #include "cache.h" // 缓存表
 #include "dns_msg.h"  // DNS报文
 #include "msg_convert.h"  // 报文转换
-#include "dns_function.h"
-#include "debug_info.h"
+#include "msg_conduct.h"
+#include "output.h"
 #include "id_converter.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <winsock2.h>
+
+#ifdef _WIN32
+#include <Winsock2.h>
+#include <windows.h>
+// Windows-specific code
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+// Linux-specific code
+#endif
 
 #define CACHE_TTL 60   // 缓存超时时间
 #define MAX_DOMAIN_LENGTH 512   // 域名最大长度
@@ -30,5 +41,8 @@ void forward_dns_request(int sock, unsigned char* buf, int len, const char* remo
 
 // 转发DNS响应报文的函数
 void forward_dns_response(int sock, unsigned char* buf, int len, struct sockaddr_in clientAddr);
+
+//超时处理
+void resendRequest();
 
 #endif

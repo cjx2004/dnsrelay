@@ -1,215 +1,260 @@
-#include "trie.h"
+ï»¿#include "trie.h"
 
 #define MAX_LINE_LENGTH 512
 
-// ³õÊ¼»¯TrieÊ÷
+/*
+1ã€æ’å…¥åŸŸåå’Œ IP åœ°å€ (insertNode):
+æ—¶é—´å¤æ‚åº¦ï¼šO(n)ï¼Œå…¶ä¸­ n æ˜¯åŸŸåçš„é•¿åº¦ã€‚éœ€è¦éå†æ•´ä¸ªåŸŸåå­—ç¬¦ä¸²ï¼Œå¯¹äºæ¯ä¸ªå­—ç¬¦ï¼Œæ‰§è¡Œç›¸åº”çš„æ’å…¥æ“ä½œã€‚
+2ã€æŸ¥æ‰¾åŸŸåå¯¹åº”çš„ IP åœ°å€ (findNode):
+æ—¶é—´å¤æ‚åº¦ï¼šO(n)ï¼Œå…¶ä¸­ n æ˜¯åŸŸåçš„é•¿åº¦ã€‚åŒæ ·éœ€è¦éå†æ•´ä¸ªåŸŸåå­—ç¬¦ä¸²ï¼Œä»¥ç¡®å®š Trie æ ‘ä¸­æ˜¯å¦å­˜åœ¨è¯¥åŸŸåã€‚
+3ã€åˆ é™¤åŸŸåå’Œå¯¹åº”çš„ IP åœ°å€ (deleteNode):
+æ—¶é—´å¤æ‚åº¦ï¼šO(n)ï¼Œåœ¨æœ€åæƒ…å†µä¸‹ï¼Œå¯èƒ½éœ€è¦éå†åŸŸåçš„å…¨éƒ¨å­—ç¬¦æ¥å®šä½èŠ‚ç‚¹ï¼Œç„¶åä» Trie æ ‘ä¸­åˆ é™¤ä¸è¯¥åŸŸåç›¸å…³çš„æ‰€æœ‰èŠ‚ç‚¹ã€‚å®é™…å¤æ‚åº¦å¯èƒ½æ›´é«˜ï¼Œå› ä¸ºåˆ é™¤æ“ä½œå¯èƒ½éœ€è¦å›æº¯åˆ°æ ¹èŠ‚ç‚¹ä»¥åˆ é™¤ä¸å†éœ€è¦çš„å†…éƒ¨èŠ‚ç‚¹ã€‚
+4ã€åŠ è½½æœ¬åœ° DNS è¡¨ (loadLocalTable):
+æ—¶é—´å¤æ‚åº¦ï¼šO(k * n)ï¼Œå…¶ä¸­ k æ˜¯æ–‡ä»¶ä¸­åŸŸåçš„æ•°é‡ï¼Œn æ˜¯å¹³å‡åŸŸåé•¿åº¦ã€‚è¿™ä¸ªå‡½æ•°è¯»å–æ–‡ä»¶ä¸­çš„æ¯ä¸€è¡Œï¼Œå¹¶å¯¹æ¯ä¸€è¡Œè°ƒç”¨Â insertNodeÂ å‡½æ•°ã€‚
+5ã€ç®€åŒ–åŸŸå (simplifyDomain):
+æ—¶é—´å¤æ‚åº¦ï¼šO(m)ï¼Œå…¶ä¸­ m æ˜¯åŸŸåçš„é•¿åº¦ã€‚è¿™ä¸ªå‡½æ•°å°†åŸŸåä¸­çš„æ¯ä¸ªå­—ç¬¦è½¬æ¢ä¸ºå°å†™ï¼Œå¦‚æœåŸŸåä¸­çš„å­—ç¬¦æ˜¯å­—æ¯çš„è¯ã€‚
+*/
+
+
+// åˆå§‹åŒ–Trieæ ‘
 void initTrie(struct Trie* trie)
 {
-    // ½«trieÊ÷ËùÓĞ½ÚµãµÄÖµÇåÁã
+    // å°†trieæ ‘æ‰€æœ‰èŠ‚ç‚¹çš„å€¼æ¸…é›¶
     memset(trie->tree, 0, sizeof(trie->tree));
-    // ½«Ç°×ºÊı×éÇåÁã
+    // å°†å‰ç¼€æ•°ç»„æ¸…é›¶
     memset(trie->prefix, 0, sizeof(trie->prefix));
-    // ½«½áÊø±êÖ¾Êı×éÇåÁã
+    // å°†ç»“æŸæ ‡å¿—æ•°ç»„æ¸…é›¶
     memset(trie->isEnd, false, sizeof(trie->isEnd));
-    // ½«IPµØÖ·Êı×éÇåÁã
+    // å°†IPåœ°å€æ•°ç»„æ¸…é›¶
     memset(trie->toIp, 0, sizeof(trie->toIp));
-    // ÉèÖÃÊ÷µÄ´óĞ¡Îª0 
+    // è®¾ç½®æ ‘çš„å¤§å°ä¸º0 
     trie->size = 0;
 }
 
 void loadLocalTable(struct Trie* trie)
 {
-    // ´ò¿ªdnsrelay.txtÎÄ¼ş
+    // æ‰“å¼€dnsrelay.txtæ–‡ä»¶
     FILE* fp = fopen("dnsrelay.txt", "r");
     if (fp == NULL)
     {
-        // Èç¹û´ò¿ªÊ§°Ü,´òÓ¡´íÎóĞÅÏ¢²¢·µ»Ø
+        // å¦‚æœæ‰“å¼€å¤±è´¥,æ‰“å°é”™è¯¯ä¿¡æ¯å¹¶è¿”å›
         printf("Failed to open dnsrelay.txt\n");
         return;
     }
 
-    // ¶ÁÈ¡ÎÄ¼şÖĞµÄÃ¿Ò»ĞĞ
+    // è¯»å–æ–‡ä»¶ä¸­çš„æ¯ä¸€è¡Œ
     char line[MAX_LINE_LENGTH];
     while (fgets(line, MAX_LINE_LENGTH, fp))
     {
-        // ÓòÃûºÍ4¸ö×Ö½ÚµÄIPµØÖ·
+        // åŸŸåå’Œ4ä¸ªå­—èŠ‚çš„IPåœ°å€
         char domain[MAX_LINE_LENGTH];
         unsigned char ip[4] = { 0, 0, 0, 0 };
-        // Í¨¹ısscanf½âÎöÃ¿Ò»ĞĞ,domainºÍipÓ¦·Ö±ğ¶ÁÈ¡ÓòÃûºÍ4¸öIPµØÖ·×Ö¶Î
+        // é€šè¿‡sscanfè§£ææ¯ä¸€è¡Œ,domainå’Œipåº”åˆ†åˆ«è¯»å–åŸŸåå’Œ4ä¸ªIPåœ°å€å­—æ®µ
         if (sscanf(line, "%hhu.%hhu.%hhu.%hhu %s", &ip[0], &ip[1], &ip[2], &ip[3], domain) != 5)
         {
-            // Èç¹û½âÎöÊ§°Ü,´òÓ¡´íÎóĞÅÏ¢²¢Ìø¹ıÕâÒ»ĞĞ
+            // å¦‚æœè§£æå¤±è´¥,æ‰“å°é”™è¯¯ä¿¡æ¯å¹¶è·³è¿‡è¿™ä¸€è¡Œ
             printf("Invalid line in dnsrelay.txt: %s\n", line);
             continue;
         }
-        // ½«ÓòÃûºÍIPµØÖ·²åÈëTrieÊ÷ÖĞ
+        // å°†åŸŸåå’ŒIPåœ°å€æ’å…¥Trieæ ‘ä¸­
         insertNode(trie, domain, ip);
     }
 
-    // ¹Ø±ÕÎÄ¼ş
+    // å…³é—­æ–‡ä»¶
     fclose(fp);
 }
 
-// ½«ÓòÃû¼ò»¯,¼´½«ÓòÃûÖĞµÄ´óĞ´×ÖÄ¸×ª»»³ÉĞ¡Ğ´×ÖÄ¸
-void simplifyDomain(char domain[])
-{
-    // »ñÈ¡ÓòÃûµÄ³¤¶È
-    int len = strlen(domain);
-    int i;
-    // ±éÀúÓòÃûµÄÃ¿¸ö×Ö·û
-    for (i = 0; i < len; i++)
-    {
-        // Èç¹ûµ±Ç°×Ö·û²»ÊÇ.ºÍ-,½«Æä×ª»»ÎªĞ¡Ğ´
-        if (domain[i] != '.' && domain[i] != '-')
-            domain[i] = tolower(domain[i]);
-    }
-    // ¸øÓòÃû¼ÓÉÏ½áÊø·û
-    domain[i] = '\0';
-}
+/*
+root å˜é‡åœ¨éå†åŸŸåçš„è¿‡ç¨‹ä¸­ï¼Œä»æ ¹èŠ‚ç‚¹å‡ºå‘ï¼Œé€æ­¥æ›´æ–°ä¸ºå½“å‰å­—ç¬¦å¯¹åº”çš„èŠ‚ç‚¹ä½ç½®ã€‚
+root åˆå§‹å€¼ä¸º 0ï¼Œè¡¨ç¤ºæ ¹èŠ‚ç‚¹ã€‚éšç€éå†çš„è¿›è¡Œï¼Œroot æ›´æ–°ä¸ºå½“å‰å­—ç¬¦å¯¹åº”çš„å­èŠ‚ç‚¹ä½ç½®ï¼Œç›´åˆ°éå†å®Œæ‰€æœ‰å­—ç¬¦ã€‚
+æœ€ç»ˆï¼Œroot æŒ‡å‘åŸŸåçš„æœ€åä¸€ä¸ªå­—ç¬¦å¯¹åº”çš„èŠ‚ç‚¹ï¼Œå¹¶åœ¨æ­¤èŠ‚ç‚¹ä¿å­˜ IP åœ°å€å’Œæ ‡è®°ä¸ºç»“æŸèŠ‚ç‚¹ã€‚
+*/
 
-// ÔÚTrieÊ÷ÖĞ²åÈëÒ»¸öÓòÃûºÍ¶ÔÓ¦µÄIPµØÖ·
-// eg:insertNode(trie, "www.baidu.com", "10.3.8.211")
+// åœ¨Trieæ ‘ä¸­æ’å…¥ä¸€ä¸ªåŸŸåå’Œå¯¹åº”çš„IPåœ°å€
 void insertNode(struct Trie* trie, const char domain[], unsigned char ipAddr[4])
 {
-    // »ñÈ¡ÓòÃûµÄ³¤¶È
+    // è·å–åŸŸåçš„é•¿åº¦
     int len = strlen(domain);
     if (len == 0)
         return;
-    // ÉêÇëÄÚ´æ±£´æÓòÃûµÄ¸±±¾
+
+    // ç”³è¯·å†…å­˜ä¿å­˜åŸŸåçš„å‰¯æœ¬
     char* temp = (char*)malloc(sizeof(char) * (len + 1));
-    // ¸´ÖÆÓòÃû
     strcpy(temp, domain);
-    // ¼ò»¯ÓòÃû,½«´óĞ´×ÖÄ¸×ª»»ÎªĞ¡Ğ´×ÖÄ¸
-    simplifyDomain(temp);
-    // ³õÊ¼»¯¸ù½ÚµãÎª0
-    int root = 0;
-    // ±éÀúÓòÃûµÄÃ¿¸ö×Ö·û
+
+    // ç®€åŒ–åŸŸåï¼Œå°†å¤§å†™å­—æ¯è½¬æ¢ä¸ºå°å†™å­—æ¯
     for (int i = 0; i < len; i++)
     {
+        if (temp[i] >= 'A' && temp[i] <= 'Z')
+            temp[i] = temp[i] - 'A' + 'a';
+    }
+
+    // åˆå§‹åŒ–æ ¹èŠ‚ç‚¹ä¸º0
+    int root = 0;
+
+    // éå†åŸŸåçš„æ¯ä¸ªå­—ç¬¦
+    for (int i = 0; i < len; i++)
+    {
+        // è®¡ç®—å½“å‰å­—ç¬¦çš„ id
         int id;
-        // Èç¹ûµ±Ç°×Ö·ûÊÇÊı×Ö,idÎª×Ö·ûµÄÖµ¼õÈ¥'0'
-        if (temp[i] >= '0' && temp[i] <= '9')
-            id = temp[i] - '0';
-        // Èç¹ûµ±Ç°×Ö·ûÊÇĞ¡Ğ´×ÖÄ¸,idÎª×Ö·ûµÄÖµ¼õÈ¥'a'¼Ó10
-        else if (temp[i] >= 'a' && temp[i] <= 'z')
-            id = temp[i] - 'a' + 10;
-        // Èç¹ûµ±Ç°×Ö·ûÊÇ'-',idÎª36
+        if (temp[i] >= 'a' && temp[i] <= 'z')
+            id = temp[i] - 'a';
+        else if (temp[i] >= '0' && temp[i] <= '9')
+            id = temp[i] - '0' + 26;  // æ•°å­—éƒ¨åˆ†ä»26å¼€å§‹è®¡æ•°
         else if (temp[i] == '-')
             id = 36;
-        // Èç¹ûµ±Ç°×Ö·ûÊÇ'.',idÎª37
-        else // temp[i] == '.'
+        else if (temp[i] == '.')
             id = 37;
+        else
+        {
+            // å¦‚æœåŸŸååŒ…å«éæ³•å­—ç¬¦ï¼Œè¿›è¡Œé€‚å½“çš„å¤„ç†
+            printf("åŸŸåå­—ç¬¦éæ³•\n");
+            free(temp);
+            return;
+        }
 
-        // Èç¹û²»´æÔÚ¶ÔÓ¦idµÄ×Ó½Úµã,Ôò´´½¨Ò»¸öĞÂµÄ½Úµã
+        // å¦‚æœä¸å­˜åœ¨å¯¹åº”idçš„å­èŠ‚ç‚¹ï¼Œåˆ™åˆ›å»ºä¸€ä¸ªæ–°çš„èŠ‚ç‚¹
         if (!trie->tree[root][id])
             trie->tree[root][id] = ++trie->size;
 
-        // ¼ÇÂ¼Ç°×º
+        // è®°å½•å‰ç¼€
         trie->prefix[trie->tree[root][id]] = root;
-        // ÒÆ¶¯µ½ÏÂÒ»¸ö½Úµã
+        // ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªèŠ‚ç‚¹
         root = trie->tree[root][id];
     }
-    // ½«µ±Ç°½Úµã±ê¼ÇÎª½áÊø½Úµã
+
+    // å°†å½“å‰èŠ‚ç‚¹æ ‡è®°ä¸ºç»“æŸèŠ‚ç‚¹
     trie->isEnd[root] = true;
-    // ¸´ÖÆIPµØÖ·
+    // å¤åˆ¶IPåœ°å€
     memcpy(trie->toIp[root], ipAddr, sizeof(unsigned char) * 4);
-    // ÊÍ·ÅÁÙÊ±ÄÚ´æ
+    // é‡Šæ”¾ä¸´æ—¶å†…å­˜
     free(temp);
 }
 
-// ²éÕÒÒ»¸öÓòÃûÔÚTrieÊ÷ÖĞ¶ÔÓ¦µÄIPµØÖ·
-// eg:findNode(trie, "www.baidu.com")
-int findNode(struct Trie* trie, const unsigned char domain[])
+// æŸ¥æ‰¾ä¸€ä¸ªåŸŸååœ¨Trieæ ‘ä¸­å¯¹åº”çš„IPåœ°å€ï¼Œè¿”å›èŠ‚ç‚¹å€¼ï¼Œæ ¹æ®toIpæ‰¾IPåœ°å€
+int findNode(struct Trie* trie, const char domain[])
 {
-    // »ñÈ¡ÓòÃûµÄ³¤¶È
-    int len = strlen((char*)domain);
+    // è·å–åŸŸåçš„é•¿åº¦
+    int len = strlen(domain);
     if (len == 0)
         return 0;
-    // ÉêÇëÄÚ´æ±£´æÓòÃûµÄ¸±±¾
+
+    // ç”³è¯·å†…å­˜ä¿å­˜åŸŸåçš„å‰¯æœ¬
     char* temp = (char*)malloc(sizeof(char) * (len + 1));
-    // ¸´ÖÆÓòÃû
-    strcpy(temp, (char*)domain);
-    // ¼ò»¯ÓòÃû,½«´óĞ´×ÖÄ¸×ª»»ÎªĞ¡Ğ´×ÖÄ¸
-    simplifyDomain(temp);
-    // ³õÊ¼»¯¸ù½ÚµãÎª0
-    int root = 0;
-    // ±éÀúÓòÃûµÄÃ¿¸ö×Ö·û
+    strcpy(temp, domain);
+
+    // ç®€åŒ–åŸŸåï¼Œå°†å¤§å†™å­—æ¯è½¬æ¢ä¸ºå°å†™å­—æ¯
     for (int i = 0; i < len; i++)
     {
-        // 'a'-'z'¶ÔÓ¦µÄidÎª10-35,'0'-'9'¶ÔÓ¦µÄidÎª0-9
-        // Èç¹ûÊÇ'-',¶ÔÓ¦µÄidÎª36,Èç¹ûÊÇ'.',¶ÔÓ¦µÄidÎª37
+        if (temp[i] >= 'A' && temp[i] <= 'Z')
+            temp[i] = temp[i] - 'A' + 'a';
+    }
+
+    // åˆå§‹åŒ–æ ¹èŠ‚ç‚¹ä¸º0
+    int root = 0;
+
+    // éå†åŸŸåçš„æ¯ä¸ªå­—ç¬¦
+    for (int i = 0; i < len; i++)
+    {
         int id;
-        if (temp[i] >= '0' && temp[i] <= '9')
-            id = temp[i] - '0';
-        else if (temp[i] >= 'a' && temp[i] <= 'z')
-            id = temp[i] - 'a' + 10;
+        if (temp[i] >= 'a' && temp[i] <= 'z')
+            id = temp[i] - 'a';
+        else if (temp[i] >= '0' && temp[i] <= '9')
+            id = temp[i] - '0' + 26;  // æ•°å­—éƒ¨åˆ†ä»26å¼€å§‹è®¡æ•°
         else if (temp[i] == '-')
             id = 36;
-        else // temp[i] == '.'
+        else if (temp[i] == '.')
             id = 37;
+        else
+        {
+            // å¦‚æœåŸŸååŒ…å«éæ³•å­—ç¬¦ï¼Œè¿›è¡Œé€‚å½“çš„å¤„ç†
+            printf("åŸŸåå­—ç¬¦éæ³•\n");
+            free(temp);
+            return;
+        }
 
-        // Èç¹û²»´æÔÚ¶ÔÓ¦idµÄ×Ó½Úµã,Ôò·µ»Ø0
+        // å¦‚æœä¸å­˜åœ¨å¯¹åº”idçš„å­èŠ‚ç‚¹ï¼Œåˆ™è¿”å›0
         if (!trie->tree[root][id])
         {
             free(temp);
             return 0;
         }
 
-        // ÒÆ¶¯µ½ÏÂÒ»¸ö½Úµã
+        // ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªèŠ‚ç‚¹
         root = trie->tree[root][id];
     }
-    // Èç¹ûÕÒµ½µÄ½Úµã²»ÊÇÖÕÖ¹½Úµã,ËµÃ÷ÓòÃû²»ÔÚTrieÊ÷ÖĞ,·µ»Ø0
-    if (trie->isEnd[root] == false)
+
+    // å¦‚æœæ‰¾åˆ°çš„èŠ‚ç‚¹ä¸æ˜¯ç»ˆæ­¢èŠ‚ç‚¹ï¼Œè¯´æ˜åŸŸåä¸åœ¨Trieæ ‘ä¸­ï¼Œè¿”å›0
+    if (!trie->isEnd[root])
     {
         free(temp);
         return 0;
     }
-    // ÊÍ·ÅÁÙÊ±ÄÚ´æ
+
+    // é‡Šæ”¾ä¸´æ—¶å†…å­˜
     free(temp);
-    // ·µ»ØÕÒµ½µÄ½Úµã
+    // è¿”å›æ‰¾åˆ°çš„èŠ‚ç‚¹
     return root;
 }
 
-// ÔÚTrieÊ÷ÖĞÉ¾³ıÒ»¸öÓòÃûºÍ¶ÔÓ¦µÄIPµØÖ·
-// eg: deleteNode(trie, "www.baidu.com")
-void deleteNode(struct Trie* trie, const unsigned char domain[])
+// åœ¨Trieæ ‘ä¸­åˆ é™¤ä¸€ä¸ªåŸŸåå’Œå¯¹åº”çš„IPåœ°å€
+void deleteNode(struct Trie* trie, const char domain[])
 {
-    // ¼ì²éÊÇ·ñÎª¿Õ´®
-    int len = strlen((char*)domain);
+    // æ£€æŸ¥æ˜¯å¦ä¸ºç©ºä¸²
+    int len = strlen(domain);
     if (len == 0)
+    {
+        printf("ä¸²é•¿ä¸º0ï¼Œå·®é”™å¤„ç†ï¼\n");
         return;
+    }
 
-    // ²éÕÒÕâ¸öÓòÃûÊÇ·ñ´æÔÚ
+    // æŸ¥æ‰¾è¿™ä¸ªåŸŸåæ˜¯å¦å­˜åœ¨
     int root = findNode(trie, domain);
     if (root == 0)
+    {
+        printf("åŸŸååœ¨æœ¬åœ°æ ‘ä¸­ä¸å­˜åœ¨ï¼Œå·®é”™å¤„ç†ï¼\n");
         return;
+    }
 
-    // ½«Õâ¸ö½Úµã±ê¼ÇÎª·ÇÖÕÖ¹½Úµã
+    // å°†è¿™ä¸ªèŠ‚ç‚¹æ ‡è®°ä¸ºéç»ˆæ­¢èŠ‚ç‚¹
     trie->isEnd[root] = false;
 
-    // ¸´ÖÆÒ»·İÓòÃû£¬ÓÃÓÚºóÃæµÄ²Ù×÷
+    // å¤åˆ¶ä¸€ä»½åŸŸåï¼Œç”¨äºåé¢çš„æ“ä½œ
     char* temp = (char*)malloc(sizeof(char) * (len + 1));
-    strcpy(temp, (char*)domain);
-    simplifyDomain(temp);
+    strcpy(temp, domain);
 
-    // Èç¹ûÕâ¸ö½Úµã²»ÊÇ¸ù½Úµã
+    // ç®€åŒ–åŸŸåï¼Œå°†å¤§å†™å­—æ¯è½¬æ¢ä¸ºå°å†™å­—æ¯
+    for (int i = 0; i < len; i++)
+    {
+        if (temp[i] >= 'A' && temp[i] <= 'Z')
+            temp[i] = temp[i] - 'A' + 'a';
+    }
+
+    // å¦‚æœè¿™ä¸ªèŠ‚ç‚¹ä¸æ˜¯æ ¹èŠ‚ç‚¹
     while (root != 0)
     {
         int id;
-        if (temp[len - 1] >= '0' && temp[len - 1] <= '9')
-            id = temp[len - 1] - '0';
-        else if (temp[len - 1] >= 'a' && temp[len - 1] <= 'z')
-            id = temp[len - 1] - 'a' + 10;
+        if (temp[len - 1] >= 'a' && temp[len - 1] <= 'z')
+            id = temp[len - 1] - 'a';      // å°å†™å­—æ¯éƒ¨åˆ†ä»0å¼€å§‹è®¡æ•°
+        else if (temp[len - 1] >= '0' && temp[len - 1] <= '9')
+            id = temp[len - 1] - '0' + 26; // æ•°å­—éƒ¨åˆ†ä»26å¼€å§‹è®¡æ•°
         else if (temp[len - 1] == '-')
-            id = 36;
-        else // temp[len - 1] == '.'
-            id = 37;
+            id = 36;                       // '-' å¯¹åº”çš„id
+        else if (temp[len - 1] == '.')
+            id = 37;                       // '.' å¯¹åº”çš„id
+        else
+        {
+            // å¦‚æœåŸŸååŒ…å«éæ³•å­—ç¬¦ï¼Œè¿›è¡Œé€‚å½“çš„å¤„ç†
+            printf("åŸŸåå­—ç¬¦éæ³•\n");
+            free(temp);
+            return;
+        }
 
-        // Èç¹ûÕâ¸ö½ÚµãµÄËùÓĞ×Ó½Úµã¶¼±»É¾³ıÁË£¬¾ÍÉ¾³ıÕâ¸ö½Úµã
+        // å¦‚æœè¿™ä¸ªèŠ‚ç‚¹çš„æ‰€æœ‰å­èŠ‚ç‚¹éƒ½è¢«åˆ é™¤äº†ï¼Œå°±åˆ é™¤è¿™ä¸ªèŠ‚ç‚¹
         bool haveChild = false;
         for (int i = 0; i < MAX_ALPHABET; i++)
         {
-            // Èç¹ûÕâ¸ö½ÚµãµÄµÚi¸ö×Ó½Úµã´æÔÚ£¬¾ÍËµÃ÷Õâ¸ö½Úµã»¹ÓĞ×Ó½Úµã
+            // å¦‚æœè¿™ä¸ªèŠ‚ç‚¹çš„ç¬¬iä¸ªå­èŠ‚ç‚¹å­˜åœ¨ï¼Œå°±è¯´æ˜è¿™ä¸ªèŠ‚ç‚¹è¿˜æœ‰å­èŠ‚ç‚¹
             if (trie->tree[root][i])
             {
                 haveChild = true;
@@ -219,7 +264,7 @@ void deleteNode(struct Trie* trie, const unsigned char domain[])
         if (haveChild)
             break;
 
-        // Èç¹ûÕâ¸ö½ÚµãµÄËùÓĞ×Ó½Úµã¶¼±»É¾³ıÁË£¬¾ÍÉ¾³ıÕâ¸ö½Úµã
+        // åˆ é™¤å½“å‰èŠ‚ç‚¹åŠå…¶çˆ¶èŠ‚ç‚¹çš„å…³ç³»
         int preNode = trie->prefix[root];
         trie->tree[preNode][id] = 0;
         trie->prefix[root] = 0;
@@ -227,6 +272,17 @@ void deleteNode(struct Trie* trie, const unsigned char domain[])
         len--;
     }
 
-    // ÊÍ·ÅÁÙÊ±ÄÚ´æ
+    // é‡Šæ”¾ä¸´æ—¶å†…å­˜
     free(temp);
+}
+
+// ç®€åŒ–åŸŸåï¼Œå°†å¤§å†™å­—æ¯è½¬æ¢ä¸ºå°å†™å­—æ¯
+void simplifyDomain(char* domain)
+{
+    int len = strlen(domain);
+    for (int i = 0; i < len; i++)
+    {
+        if (domain[i] >= 'A' && domain[i] <= 'Z')
+            domain[i] = domain[i] - 'A' + 'a';
+    }
 }

@@ -1,30 +1,40 @@
 #ifndef ID_CONVERTER_H
 #define ID_CONVERTER_H
 
-#include <winsock2.h>
+#ifdef _WIN32
+#include <Winsock2.h>
+#include <windows.h>
+// Windows-specific code
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+// Linux-specific code
+#endif
 
-typedef struct
-{
+// 用于存储id和clientAddr的映射的键
+typedef struct {
     unsigned short id;
     struct sockaddr_in clientAddr;
-} Key; // 用于存储id和clientAddr的映射的键
+} Key;
 
-typedef struct
-{
+// 用于存储id和clientAddr的映射的键值对
+typedef struct {
     Key key;
     unsigned short value;
-} KeyValue; // 用于存储id和clientAddr的映射的键值对
+} KeyValue;
 
 // 用于存储id和clientAddr的映射
-int trans_port_id(unsigned short id, struct sockaddr_in clientAddr);
+int translate_id(unsigned short id, struct sockaddr_in clientAddr);
 
 // 查找原始id
-unsigned short find_id(unsigned Value);
+unsigned short retrieve_id(unsigned index);
 
 // 查找原始clientAddr
-struct sockaddr_in find_clientAddr(unsigned Value);
+struct sockaddr_in retrieve_clientAddr(unsigned index);
 
 // 移除映射
-void remove_id(unsigned Value);
+void remove_mapping(unsigned index);
 
 #endif /* ID_CONVERTER_H */
