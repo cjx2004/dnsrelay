@@ -19,10 +19,11 @@ void addAnswer(Dns_Msg* msg, const unsigned char* IP, unsigned int _ttl, unsigne
         msg->header->rcode = 3;
     }
     // 设置header字段的值：响应标志qr为1（响应消息），递归查询rd为1，可用性标志ra为1，回答计数ancount加一
-    msg->header->qr = 1;
-    msg->header->rd = 1;
+    
     msg->header->ra = 1;
     msg->header->ancount++;
+    msg->header->qr = 1;
+    msg->header->rd = 1;
 
     // 添加一个Resource Record到answer字段中
     Dns_RR* rr = msg->RRs;
@@ -89,7 +90,7 @@ void addAnswer(Dns_Msg* msg, const unsigned char* IP, unsigned int _ttl, unsigne
 void getDN_IP(const unsigned char* bytestream, unsigned char* DN, unsigned char* IP, unsigned int* _ttl, unsigned short* _type)
 {
     unsigned short offset;
-    Dns_Msg* msg = bytestream_to_dnsmsg(bytestream, &offset);
+    Dns_Msg* msg = btod(bytestream, &offset);
     transDN(msg->question->qname, DN);
     Dns_RR* rr = msg->RRs;
     //取RR中类型为ipv4或者v6的第一个ip地址

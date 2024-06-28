@@ -22,10 +22,10 @@
 
 
 // 字节流转换为DNS报文结构体
-Dns_Msg * bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* offset);
+Dns_Msg * btod(const unsigned char* bytestream, unsigned short* offset);
 
 // DNS报文结构体转换为字节流
-unsigned char* dnsmsg_to_bytestream(const Dns_Msg* msg);
+unsigned char* dtob(const Dns_Msg* msg);
 
 // 从字节流中提取Header的内容
 void getHeader(Dns_Header* header, const unsigned char* bytestream);
@@ -40,19 +40,19 @@ void getQuestion(Dns_Question* question, const unsigned char* bytestream, unsign
 void getRR(Dns_RR* RR, const unsigned char* bytestream, unsigned short* offset);
 
 // 将Header填入字节流
-void putHeader(const Dns_Header* header, unsigned char* bytestream);
+void puth(const Dns_Header* header, unsigned char* bytestream);
 
 // 将Question填入字节流
-void putQuestion(const Dns_Question* question, unsigned char* bytestream, unsigned short* offset);
+void putQ(const Dns_Question* question, unsigned char* bytestream, unsigned short* offset);
 
 // 将RR填入字节流
-void putRR(const Dns_RR* rr, unsigned char* bytestream, unsigned short* offset);
+void putr(const Dns_RR* rr, unsigned char* bytestream, unsigned short* offset);
 
 // 获得点分十进制形式的IPv4地址
-void transIPv4(unsigned char* original, unsigned char* IPv4);
+void tran4(unsigned char* original, unsigned char* IPv4);
 
 // 获得冒分十六进制形式的IPv6地址
-void transIPv6(unsigned char* original, unsigned char* IPv6);
+void tran6(unsigned char* original, unsigned char* IPv6);
 
 // 获得xx.xx.xx形式的域名
 void transDN(unsigned char* original, unsigned char* DN);

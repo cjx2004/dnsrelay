@@ -9,17 +9,17 @@
 #include <time.h>
 
 /*
-* RRInfo(Dns_RR* rr): 输出单个资源记录（Resource Record，RR）的详细信息。根据记录类型（IPv4或IPv6）输出不同格式的数据字段。
+* printrr(Dns_RR* rr): 输出单个资源记录（Resource Record，RR）的详细信息。根据记录类型（IPv4或IPv6）输出不同格式的数据字段。
 *
-* debug(Dns_Msg* msg): 输出调试信息，打印整个 DNS 报文的各个部分信息，包括报文头部、问题部分、应答部分、授权部分和附加部分。调用了前面的 printTime() 和 RRInfo() 函数。
+* printmsg(Dns_Msg* msg): 输出调试信息，打印整个 DNS 报文的各个部分信息，包括报文头部、问题部分、应答部分、授权部分和附加部分。调用了前面的 printTime() 和 printrr() 函数。
 *
-* bytestreamInfo(unsigned char* bytestream): 输出字节流的16进制表示。将字节流转换为 DNS 消息结构体后，按16进制格式输出字节流内容，并释放相关内存。
+* printbytes(unsigned char* bytestream): 输出字节流的16进制表示。将字节流转换为 DNS 消息结构体后，按16进制格式输出字节流内容，并释放相关内存。
 */
 
 
 
 // 输出调试信息，打印DNS报文的各个部分
-void debug(Dns_Msg* msg)
+void printmsg(Dns_Msg* msg)
 {
 
 
@@ -61,7 +61,7 @@ void debug(Dns_Msg* msg)
     for (int i = 0; i < msg->header->ancount; i++)
     {
         printf("资源记录 %d\n", i + 1);
-        RRInfo(rr); // 输出单个资源记录的信息
+        printrr(rr); // 输出单个资源记录的信息
         rr = rr->next;
     }
 
@@ -73,7 +73,7 @@ void debug(Dns_Msg* msg)
     for (int i = 0; i < msg->header->nscount; i++)
     {
         printf("资源记录 %d\n", i + 1);
-        RRInfo(rr); // 输出单个资源记录的信息
+        printrr(rr); // 输出单个资源记录的信息
         rr = rr->next;
     }
 
@@ -85,7 +85,7 @@ void debug(Dns_Msg* msg)
     for (int i = 0; i < msg->header->arcount; i++)
     {
         printf("资源记录 %d\n", i + 1);
-        RRInfo(rr); // 输出单个资源记录的信息
+        printrr(rr); // 输出单个资源记录的信息
         rr = rr->next;
     }
 
@@ -93,10 +93,10 @@ void debug(Dns_Msg* msg)
 }
 
 // 输出字节流的16进制表示
-void bytestreamInfo(unsigned char* bytestream)
+void printbytes(unsigned char* bytestream)
 {
     unsigned short offset;
-    Dns_Msg* msg = bytestream_to_dnsmsg(bytestream, &offset); // 将字节流转换为DNS消息结构体
+    Dns_Msg* msg = btod(bytestream, &offset); // 将字节流转换为DNS消息结构体
     for (int i = 0; i < (int)(offset); i += 16)
     {
         printf("%04lx: ", i); // 输出偏移地址
@@ -110,7 +110,7 @@ void bytestreamInfo(unsigned char* bytestream)
 }
 
 // 输出单个Resource Record的信息
-void RRInfo(Dns_RR* rr)
+void printrr(Dns_RR* rr)
 {
     unsigned char name[UDP_MAX];
     transDN(rr->name, name); // 转换域名格式
@@ -124,13 +124,13 @@ void RRInfo(Dns_RR* rr)
     if (rr->type == TYPE_A)
     {
         unsigned char IPv4[20];
-        transIPv4(rr->rdata, IPv4); // 转换IPv4地址格式
+        tran4(rr->rdata, IPv4); // 转换IPv4地址格式
         printf("数据内容:%20s", IPv4);
     }
     else if (rr->type == TYPE_AAAA)
     {
         unsigned char IPv6[40];
-        transIPv6(rr->rdata, IPv6); // 转换IPv6地址格式
+        tran6(rr->rdata, IPv6); // 转换IPv6地址格式
         printf("数据内容:%20s", IPv6);
     }
     printf("\n");

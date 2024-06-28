@@ -29,19 +29,19 @@ struct Cache
 void initCache(struct Cache* cache);
 
 // ¼ÆËã¹şÏ£Öµ
-unsigned int hashCode(const unsigned char* domain);
+unsigned int calculateHash(const unsigned char* domain);
 
 // ²éÕÒ»º´æÏî
-int findEntry(struct Cache* cache, const unsigned char* domain, unsigned char* ipAddr, int ipVersion);
+int retrieveCacheEntry(struct Cache* cache, const unsigned char* domain, unsigned char* ipAddr, int ipVersion);
 
 // Ìí¼Ó»º´æÏî
-void addEntry(struct Cache* cache, const unsigned char* domain, const unsigned char* ipAddr, int ipVersion, time_t ttl);
+void insertCacheEntry(struct Cache* cache, const unsigned char* domain, const unsigned char* ipAddr, int ipVersion, time_t ttl);
 
 // É¾³ı»º´æÏî
-void removeExpiredEntries(struct Cache* cache);
+void purgeExpiredEntries(struct Cache* cache);
 
 // Çå¿Õ»º´æ
-void clearCache(struct Cache* cache);
+void clearCacheEntries(struct Cache* cache);
 
 // ´òÓ¡»º´æÄÚÈİ
 void printCache(struct Cache* cache);

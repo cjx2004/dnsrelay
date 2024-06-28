@@ -36,7 +36,7 @@
 */
 
 // 解析字节流中的DNS报文头部，并填充到Dns_Header结构体中
-void getHeader(Dns_Header* header, const unsigned char* bytestream)
+void geth(Dns_Header* header, const unsigned char* bytestream)
 {
     // 从字节流中提取并转换DNS报文头部字段
     header->id = ntohs(*(unsigned short*)bytestream); // 报文ID，使用ntohs将网络字节顺序转换为主机字节顺序
@@ -55,14 +55,14 @@ void getHeader(Dns_Header* header, const unsigned char* bytestream)
 }
 
 // 从字节流中提取域名，并存储到指定的qname数组中，同时更新offset表示的偏移量
-void getName(unsigned char* qname, const unsigned char* bytestream, unsigned short* offset)
+void getn(unsigned char* qname, const unsigned char* bytestream, unsigned short* offset)
 {
     while (*(bytestream + *offset) != 0) // 每个标签以0结束，当遇到0时表示域名结束
     {
         if (((*(bytestream + *offset) >> 6) & 3) == 3) // 判断是否为压缩标签
         {
             unsigned short new_offset = ntohs(*(unsigned short*)(bytestream + *offset)) & 0x3fff; // 获取新的偏移量
-            getName(qname, bytestream, &new_offset); // 递归处理压缩的域名
+            getn(qname, bytestream, &new_offset); // 递归处理压缩的域名
             (*offset) += 2; // 更新偏移量，跳过压缩标签的2个字节
             return;
         }
@@ -90,7 +90,7 @@ void getName(unsigned char* qname, const unsigned char* bytestream, unsigned sho
 */
 
 // 从字节流中提取DNS查询部分的问题信息，并填充到Dns_Question结构体中
-void getQuestion(Dns_Question* question, const unsigned char* bytestream, unsigned short* offset)
+void getqs(Dns_Question* question, const unsigned char* bytestream, unsigned short* offset)
 {
     // 动态分配内存存储问题的域名
     question->qname = (unsigned char*)malloc(sizeof(unsigned char) * UDP_MAX);
@@ -101,7 +101,7 @@ void getQuestion(Dns_Question* question, const unsigned char* bytestream, unsign
     }
 
     // 提取域名信息，并存储到question->qname中，同时更新offset
-    getName(question->qname, bytestream, offset);
+    getn(question->qname, bytestream, offset);
 
     // 提取问题类型（qtype）和问题类（qclass），并转换为主机字节顺序
     question->qtype = ntohs(*(unsigned short*)(bytestream + *offset));
@@ -137,7 +137,7 @@ void getQuestion(Dns_Question* question, const unsigned char* bytestream, unsign
     */
 
 // 从字节流中提取DNS资源记录（Resource Record）信息，并填充到Dns_RR结构体中
-void getRR(Dns_RR* RR, const unsigned char* bytestream, unsigned short* offset)
+void getr(Dns_RR* RR, const unsigned char* bytestream, unsigned short* offset)
 {
     // 动态分配内存存储资源记录的域名
     RR->name = (unsigned char*)malloc(sizeof(unsigned char) * UDP_MAX);
@@ -148,7 +148,7 @@ void getRR(Dns_RR* RR, const unsigned char* bytestream, unsigned short* offset)
     }
 
     // 提取域名信息，并存储到RR->name中，同时更新offset
-    getName(RR->name, bytestream, offset);
+    getn(RR->name, bytestream, offset);
 
     // 提取资源记录的类型（type）、类（class）、TTL和数据长度（rdlength），并转换为主机字节顺序
     RR->type = ntohs(*(unsigned short*)(bytestream + *offset));
@@ -176,14 +176,14 @@ void getRR(Dns_RR* RR, const unsigned char* bytestream, unsigned short* offset)
 }
 
 // 将原始的IPv4地址转换为点分十进制形式的字符串表示
-void transIPv4(unsigned char* original, unsigned char* IPv4)
+void tran4(unsigned char* original, unsigned char* IPv4)
 {
     // 使用sprintf将原始的IPv4地址转换为字符串格式
     sprintf((char*)(IPv4), "%d.%d.%d.%d", original[0], original[1], original[2], original[3]);
 }
 
 // 将原始的IPv6地址转换为冒分十六进制形式的字符串表示
-void transIPv6(unsigned char* original, unsigned char* IPv6)
+void tran6(unsigned char* original, unsigned char* IPv6)
 {
     // 使用sprintf将原始的IPv6地址转换为冒分十六进制形式的字符串格式
     sprintf((char*)(IPv6), "%x:%x:%x:%x:%x:%x:%x:%x", ntohs(*(unsigned short*)(original)),
@@ -248,7 +248,7 @@ void releaseMsg(Dns_Msg* msg)
 
 
 // 将字节流转换为DNS消息结构体
-Dns_Msg* bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* offset)
+Dns_Msg* btod(const unsigned char* bytestream, unsigned short* offset)
 {
     Dns_Msg* msg = (Dns_Msg*)malloc(sizeof(Dns_Msg));
     if (!msg)
@@ -257,14 +257,14 @@ Dns_Msg* bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* o
         exit(1); // 退出程序，处理内存分配失败的情况
     }
 
-    // 转换header部分：动态分配内存存储header，调用getHeader函数填充header信息
+    // 转换header部分：动态分配内存存储header，调用geth函数填充header信息
     msg->header = (Dns_Header*)malloc(sizeof(Dns_Header));
     if (!msg->header)
     {
         puts("动态分配内存失败"); // 内存分配失败提示
         exit(1); // 退出程序，处理内存分配失败的情况
     }
-    getHeader(msg->header, bytestream); // 填充header信息
+    geth(msg->header, bytestream); // 填充header信息
 
     *offset = 12; // 设置初始偏移量为12，跳过header部分
 
@@ -290,7 +290,7 @@ Dns_Msg* bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* o
             current->next = NULL;
         }
         question_tail = current;
-        getQuestion(current, bytestream, offset); // 填充当前question信息
+        getqs(current, bytestream, offset); // 填充当前question信息
     }
 
     // 转换answer、authority、additional部分：遍历每个资源记录并转换为Dns_RR结构体
@@ -316,7 +316,7 @@ Dns_Msg* bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* o
             current->next = NULL;
         }
         RRs_tail = current;
-        getRR(current, bytestream, offset); // 填充当前资源记录信息
+        getr(current, bytestream, offset); // 填充当前资源记录信息
     }
 
     return msg; // 返回填充完整的DNS消息结构体
@@ -324,7 +324,7 @@ Dns_Msg* bytestream_to_dnsmsg(const unsigned char* bytestream, unsigned short* o
 
 
 // 将DNS消息结构体中的header部分填入字节流
-void putHeader(const Dns_Header* header, unsigned char* bytestream)
+void puth(const Dns_Header* header, unsigned char* bytestream)
 {
     // 填入16位的id字段，高8位在前，低8位在后
     bytestream[0] = header->id >> 8;
@@ -362,7 +362,7 @@ void putHeader(const Dns_Header* header, unsigned char* bytestream)
 }
 
 // 将DNS消息结构体中的question部分填入字节流
-void putQuestion(const Dns_Question* question, unsigned char* bytestream, unsigned short* offset)
+void putQ(const Dns_Question* question, unsigned char* bytestream, unsigned short* offset)
 {
     // 复制域名字段到字节流中，直到遇到域名结束符0
     memcpy(bytestream + *offset, question->qname, strlen((char*)(question->qname)) + 1);
@@ -384,7 +384,7 @@ void putQuestion(const Dns_Question* question, unsigned char* bytestream, unsign
 }
 
 // 将DNS消息结构体中的RR（资源记录）部分填入字节流
-void putRR(const Dns_RR* rr, unsigned char* bytestream, unsigned short* offset)
+void putr(const Dns_RR* rr, unsigned char* bytestream, unsigned short* offset)
 {
     // 复制域名字段到字节流中，直到遇到域名结束符0
     memcpy(bytestream + *offset, rr->name, strlen((char*)(rr->name)) + 1);
@@ -430,7 +430,7 @@ void putRR(const Dns_RR* rr, unsigned char* bytestream, unsigned short* offset)
 }
 
 // 将DNS消息结构体转换为字节流表示
-unsigned char* dnsmsg_to_bytestream(const Dns_Msg* msg)
+unsigned char* dtob(const Dns_Msg* msg)
 {
     unsigned char* bytestream = (unsigned char*)malloc(sizeof(unsigned char) * UDP_MAX);
     if (!bytestream)
@@ -440,7 +440,7 @@ unsigned char* dnsmsg_to_bytestream(const Dns_Msg* msg)
     }
 
     // 填入header部分到字节流中
-    putHeader(msg->header, bytestream);
+    puth(msg->header, bytestream);
 
     // 设置初始偏移量为12，用于跳过header部分
     unsigned short offset = 12;
@@ -449,7 +449,7 @@ unsigned char* dnsmsg_to_bytestream(const Dns_Msg* msg)
     Dns_Question* question = msg->question;
     while (question)
     {
-        putQuestion(question, bytestream, &offset);
+        putQ(question, bytestream, &offset);
         question = question->next;
     }
 
@@ -457,7 +457,7 @@ unsigned char* dnsmsg_to_bytestream(const Dns_Msg* msg)
     Dns_RR* rr = msg->RRs;
     while (rr)
     {
-        putRR(rr, bytestream, &offset);
+        putr(rr, bytestream, &offset);
         rr = rr->next;
     }
 

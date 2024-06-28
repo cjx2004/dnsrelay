@@ -22,41 +22,37 @@ void initCache(struct Cache* cache)
 }
 
 // 计算哈希值
-unsigned int hashCode(const unsigned char* domain)
+unsigned int calculateHash(const unsigned char* domain)
 {
     if (domain == NULL) {
-        printf("差错处理：域名为空，发生错误！\n");
+        printf("Error: Domain is NULL!\n");
         return 0;
     }
-    uint32_t hashValue = MurmurHash(domain, strlen((const char*)domain), 0) % CACHE_SIZE; // 调用 MurmurHash 算法计算哈希值
-    return (unsigned int)hashValue; // 返回哈希值
+    uint32_t hashValue = MurmurHash(domain, strlen((const char*)domain), 0) % CACHE_SIZE;
+    return (unsigned int)hashValue;
 }
 
-
 // 添加缓存项
-void addEntry(struct Cache* cache, const unsigned char* domain, const unsigned char* ipAddr, int ipVersion, time_t ttl)
+void insertCacheEntry(struct Cache* cache, const unsigned char* domain, const unsigned char* ipAddr, int ipVersion, time_t ttl)
 {
     if (domain == NULL) {
-        printf("差错处理：域名为空，发生错误！\n");
-        return ;
+        printf("Error: Domain is NULL!\n");
+        return;
     }
-    printf("正在加入cache...\n");
-    size_t domainLen = strlen((const char*)domain); // 获取域名长度
-    unsigned int hash = hashCode(domain); // 获取哈希值
-    time_t now = time(NULL); // 获取当前时间
+    printf("Inserting into cache...\n");
+    size_t domainLen = strlen((const char*)domain);
+    unsigned int hash = calculateHash(domain);
+    time_t now = time(NULL);
 
-    // 新建缓存项
     struct CacheEntry* entry = (struct CacheEntry*)malloc(sizeof(struct CacheEntry));
     if (entry == NULL) {
-        printf("内存分配失败!\n");
+        printf("Memory allocation failed!\n");
         return;
-    }       
+    }
 
-    // 复制域名
     memcpy(entry->domain, domain, domainLen + 1);
     entry->domain[domainLen] = '\0';
 
-    // 复制IP地址
     if (ipVersion == 1) {
         memcpy(entry->ipAddr, ipAddr, sizeof(entry->ipAddr));
     }
@@ -64,80 +60,68 @@ void addEntry(struct Cache* cache, const unsigned char* domain, const unsigned c
         memcpy(entry->ipAddr6, ipAddr, sizeof(entry->ipAddr6));
     }
     else {
-        // 无效的 IP 版本，差错处理
-        printf("ip地址出错!\n");
+        printf("Error: Invalid IP version!\n");
         free(entry);
         return;
     }
 
-    // 设置过期时间
     entry->expireTime = now + ttl;
 
-    // 检查缓存是否已满，如果满了，按照LRU策略删除最久未使用的缓存项
-    int isfull = 1;
+    // Check if cache is full, remove least recently used entry according to LRU strategy
+    int isFull = 1;
     for (int i = 0; i < CACHE_SIZE; i++) {
         if (cache->table[i] == NULL) {
-            //未满
-            isfull = 0;
+            isFull = 0;
             break;
         }
         else {
-
             removeLeastRecentlyUsed(cache);
         }
     }
 
-    // 添加到链表头部
     entry->prev = NULL;
     entry->next = cache->head;
-    if (cache->head != NULL) // 如果链表不为空
+    if (cache->head != NULL)
         cache->head->prev = entry;
-    cache->head = entry; // 更新链表头指针
-    if (cache->tail == NULL) // 如果链表为空
+    cache->head = entry;
+    if (cache->tail == NULL)
         cache->tail = entry;
 
-    // 添加到哈希表
     entry->prev = NULL;
     entry->next = cache->table[hash];
     if (cache->table[hash] != NULL)
         cache->table[hash]->prev = entry;
     cache->table[hash] = entry;
-    printf("加入cache成功！\n");
-    //printCache(cache);
-    // 删除过期的缓存项
+    printf("Successfully added to cache!\n");
     removeExpiredEntries(cache);
 }
 
 // 删除过期的缓存项
-void removeExpiredEntries(struct Cache* cache)
+void purgeExpiredEntries(struct Cache* cache)
 {
-    time_t now = time(NULL); // 获取当前时间
-    // 从链表尾部开始删除过期的缓存项
+    time_t now = time(NULL);
     struct CacheEntry* entry = cache->tail;
     while (entry != NULL && entry->expireTime < now)
     {
-        struct CacheEntry* pre = entry->prev;
-
-        // 从链表中删除过期的缓存项
-        if (pre != NULL)
+        struct CacheEntry* prev = entry->prev;
+        if (prev != NULL)
         {
-            pre->next = NULL;
-            cache->tail = pre;
+            prev->next = NULL;
+            cache->tail = prev;
         }
         else
         {
             cache->tail = NULL;
             cache->head = NULL;
         }
-        free(entry); // 释放内存
+        free(entry);
         entry = cache->tail;
     }
 }
 
 // 清空缓存
-void clearCache(struct Cache* cache)
+void clearCacheEntries(struct Cache* cache)
 {
-    // 遍历哈希表，释放缓存项内存
     for (int i = 0; i < CACHE_SIZE; i++)
     {
         struct CacheEntry* entry = cache->table[i];
@@ -149,89 +133,83 @@ void clearCache(struct Cache* cache)
         }
         cache->table[i] = NULL;
     }
-    cache->head = NULL; // 链表头指针置空
-    cache->tail = NULL; // 链表尾指针置空
+    cache->head = NULL;
+    cache->tail = NULL;
 }
 
 // 查找缓存项
-// 如果缓存项存在且未过期，将其移动到链表头部，并设置 IP 地址，返回 1
-// 如果缓存项不存在或已过期，删除其对应的哈希表和链表项，返回 0
-int findEntry(struct Cache* cache, const unsigned char* domain, unsigned char* ipAddr, int ipVersion)
+int retrieveCacheEntry(struct Cache* cache, const unsigned char* domain, unsigned char* ipAddr, int ipVersion)
 {
+    size_t domainLen = strlen((const char*)domain);
+    unsigned int hash = calculateHash(domain);
+    time_t now = time(NULL);
 
-    size_t domainLen = strlen((const char*)domain); // 获取域名长度
-    unsigned int hash = hashCode(domain); // 获取哈希值
-    time_t now = time(NULL); // 获取当前时间
-
-    printf("开始在cache中寻找,域名为：%s,哈希值为：%u \n", domain, hash);
-
+    printf("Searching cache for domain: %s, hash: %u \n", domain, hash);
 
     struct CacheEntry* entry = cache->table[hash];
 
     while (entry != NULL)
     {
-        printf("进入对应哈希格了\n");
-        if (entry->expireTime < 0) // 如果已经超时
+        printf("Accessing corresponding hash field\n");
+        if (entry->expireTime < 0)
         {
             cache->table[hash] = NULL;
             return 0;
         }
         if (cache->head != cache->tail)
         {
-            removeExpiredEntries(cache);
-            printf("在缓存表查找成功,域名为%s\n", domain);
+            purgeExpiredEntries(cache);
+            printf("Successful search in cache, domain: %s\n", domain);
             return 0;
         }
-        // 如果找到了对应的域名
-        if (strcmp((const char*)entry->domain, (const char*)domain) == 0 && ((ipVersion==1 && entry->ipAddr != NULL) || (ipVersion == 28 && entry->ipAddr6 != NULL)))
+
+        if (strcmp((const char*)entry->domain, (const char*)domain) == 0 && ((ipVersion == 1 && entry->ipAddr != NULL) || (ipVersion == 28 && entry->ipAddr6 != NULL)))
         {
-            printf("找到对应域名！\n");
-            // 如果缓存项未过期
+            printf("Domain found!\n");
+
             if (entry->expireTime >= now)
             {
-                // LRU策略，将命中的缓存移动到链表头部
-                if (entry->prev != NULL) // 如果不是链表头部
+                if (entry->prev != NULL)
                     entry->prev->next = entry->next;
-                else // 如果是链表头部
+                else
                     cache->head = entry->next;
-                if (entry->next != NULL) // 如果不是链表尾部
+                if (entry->next != NULL)
                     entry->next->prev = entry->prev;
-                else // 如果是链表尾部
+                else
                     cache->tail = entry->prev;
 
-                entry->expireTime = now + 60; // 更新过期时间
+                entry->expireTime = now + 60;
                 entry->prev = NULL;
                 entry->next = cache->head;
                 cache->head = entry;
 
-                // 设置 IP 地址
                 if (ipVersion == 1)
                     memcpy(ipAddr, entry->ipAddr, sizeof(entry->ipAddr));
                 else
                     memcpy(ipAddr, entry->ipAddr6, sizeof(entry->ipAddr6));
 
-                return 1; // 返回成功
+                return 1;
             }
-            else // 如果缓存项已过期
+            else
             {
-                // 缓存过期，删除缓存
-                if (entry->prev != NULL) // 如果不是链表头部
+                if (entry->prev != NULL)
                     entry->prev->next = entry->next;
-                else // 如果是链表头部
+                else
                     cache->table[hash] = entry->next;
-                if (entry->next != NULL) // 如果不是链表尾部
+                if (entry->next != NULL)
                     entry->next->prev = entry->prev;
-                else // 如果是链表尾部
+                else
                     cache->tail = entry->prev;
-                free(entry); // 释放内存
-                return 0; // 返回失败
+                free(entry);
+                return 0;
             }
         }
-        entry = entry->next; // 移动指针
+        entry = entry->next;
     }
 
-    return 0; // 返回失败
+    return 0;
 }
+
 
 // 打印缓存内容
 void printCache(struct Cache* cache)
@@ -272,7 +250,7 @@ void removeLeastRecentlyUsed(struct Cache* cache)
     {
         // 从链表尾部删除最久未使用的缓存项
         struct CacheEntry* entry = cache->tail;
-        unsigned int hash = hashCode(entry->domain); // 计算域名的哈希值
+        unsigned int hash = calculateHash(entry->domain); // 计算域名的哈希值
 
         // 从哈希表中删除当前节点
         if (entry->prev != NULL)

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <process.h>
-#include "dns_relay_server.h"
+#include "dns service.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -39,13 +39,13 @@ struct ThreadPool
 };
 
 // 初始化线程池和等待队列
-void init_thread_pool(struct ThreadPool* pool);
+void init_pool_of_thread(struct ThreadPool* pool);
 
 // 销毁线程池和等待队列
-void destroy_thread_pool(struct ThreadPool* pool);
+void destroy_pool_of_thread(struct ThreadPool* pool);
 
 // 添加DNS请求到线程池或等待队列中
-void add_to_pool(struct ThreadPool* pool, struct ThreadParam* param);
+void add_pool_of_thread(struct ThreadPool* pool, struct ThreadParam* param);
 
 // 线程入口函数，用于处理DNS请求
 unsigned __stdcall threadProc(void* pParam);

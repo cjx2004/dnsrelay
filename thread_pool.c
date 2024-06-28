@@ -8,7 +8,7 @@ extern CRITICAL_SECTION threadPoolCS; // 线程池临界区，critical_section
 extern HANDLE semaphore;              // 信号量，用于线程池和等待队列之间的同步,handle
 
 // 初始化线程池和等待队列
-void init_thread_pool(struct ThreadPool* pool)
+void init_pool_of_thread(struct ThreadPool* pool)
 {
     // 初始化线程池参数
     pool->count = 0;
@@ -33,7 +33,7 @@ void init_thread_pool(struct ThreadPool* pool)
 }
 
 // 销毁线程池和等待队列
-void destroy_thread_pool(struct ThreadPool* pool)
+void destroy_pool_of_thread(struct ThreadPool* pool)
 {
     // 释放每个线程参数的内存
     for (int i = 0; i < pool->count; i++)
@@ -46,7 +46,7 @@ void destroy_thread_pool(struct ThreadPool* pool)
 }
 
 // 添加DNS请求到线程池或等待队列中
-void add_to_pool(struct ThreadPool* pool, struct ThreadParam* param)
+void add_pool_of_thread(struct ThreadPool* pool, struct ThreadParam* param)
 {
     EnterCriticalSection(&threadPoolCS); // 进入临界区
 

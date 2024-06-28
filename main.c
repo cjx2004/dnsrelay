@@ -3,7 +3,7 @@
 #include <process.h>
 #include <stdbool.h>
 #include <string.h>
-#include "dns_relay_server.h"
+#include "dns service.h"
 #include "thread_pool.h"
 
 #ifdef _WIN32
@@ -88,8 +88,8 @@ int main(int argc, char* argv[])
 
     // 创建字典树和缓存表
     struct Trie* trie = (struct Trie*)malloc(sizeof(struct Trie));
-    initTrie(trie); //创建字典树
-    loadLocalTable(trie); //字典树附初值
+    initializeTrie(trie); //创建字典树
+    loadLocalTableEntries(trie); //字典树附初值
 
     struct Cache* cache = (struct Cache*)malloc(sizeof(struct Cache)); //创建cache
     initCache(cache);
@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
             param->remoteDnsAddr = remoteDnsAddr;
 
             EnterCriticalSection(&threadPoolCS);
-            add_to_pool(&threadPool, param);
+            add_pool_of_thread(&threadPool, param);
             LeaveCriticalSection(&threadPoolCS);
         }
     }
@@ -160,10 +160,10 @@ int main(int argc, char* argv[])
     // 关闭socket和清理资源
     closesocket(sock);
     free(trie);
-    clearCache(cache);
+    clearCacheEntries(cache);
     free(cache);
     // 销毁线程池和等待队列
-    destroy_thread_pool(&threadPool);
+    destroy_pool_of_thread(&threadPool);
     WSACleanup();
 
     return 0;
